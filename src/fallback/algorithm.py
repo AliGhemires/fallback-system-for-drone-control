@@ -1,67 +1,45 @@
-# Fallback: Inertial Navigation-based Fallback System
-
-class FallbackAlgorithm:
+class FallbackSystem:
     def __init__(self):
-        self.rssi_threshold = -90  # Threshold for switching to fallback
-        self.inertial_navigation_active = False
+        self.rssi_threshold = -80  # Signal strength threshold for fallback
+        self.navigation_mode = "Normal"  # Current navigation mode
 
     def check_rssi(self, rssi_value):
-        """
-        Checks if the RSSI value is above the threshold.
-        Returns True if RSSI is strong, False otherwise.
-        Handles edge cases where RSSI might be None.
-        """
-        if rssi_value is None:
-            print("Warning: RSSI value is None.")
-            return False
-        return rssi_value >= self.rssi_threshold
-
-    def activate_fallback(self):
-        """
-        Activate inertial navigation when signal is weak.
-        """
-        if not self.inertial_navigation_active:
-            self.inertial_navigation_active = True
-            print("Fallback activated: Switching to inertial navigation.")
-
-    def deactivate_fallback(self):
-        """
-        Deactivate inertial navigation and restore normal operations.
-        """
-        if self.inertial_navigation_active:
-            self.inertial_navigation_active = False
-            print("Fallback deactivated: Restoring standard navigation.")
-
-    def process_navigation(self, rssi_value):
-        """
-        Process the RSSI value to determine the correct navigation method.
-        """
-        if self.check_rssi(rssi_value):
-            if self.inertial_navigation_active:
-                self.deactivate_fallback()
-                self.navigate_with_signal()
+        """Check RSSI value to determine navigation mode."""
+        try:
+            if not isinstance(rssi_value, (int, float)):
+                raise ValueError("RSSI value must be a number")
+            if rssi_value < self.rssi_threshold:
+                self.switch_to_fallback_mode()
             else:
-                self.navigate_with_signal()
-        else:
-            self.activate_fallback()
-            self.navigate_inertially()
+                self.navigation_mode = "Normal"
+        except ValueError as e:
+            self.log_error(e)
 
-    def navigate_with_signal(self):
-        """
-        Placeholder for logic when navigating using sufficient RSSI.
-        """
-        print("Navigating using signal...")
+    def switch_to_fallback_mode(self):
+        """Switch to inertial navigation when RSS signal is lost."""
+        if self.navigation_mode != "Inertial":
+            self.navigation_mode = "Inertial"
+            self.log_fallback_action()
 
-    def navigate_inertially(self):
-        """
-        Placeholder for inertial navigation logic.
-        """
-        print("Navigating using inertial navigation...")
+    def log_fallback_action(self):
+        """Log the fallback action for monitoring purposes."""
+        with open('fallback_log.txt', 'a') as log_file:
+            log_file.write('Fallback activated. Mode: Inertial\n')
 
-# Example usage:
-if __name__ == '__main__':
-    fallback_system = FallbackAlgorithm()
-    # Simulate receiving RSSI signal
-    test_rssi_values = [-85, -95, -80, -92, None, -70]
-    for rssi in test_rssi_values:
-        fallback_system.process_navigation(rssi)
+    def log_error(self, error):
+        """Log errors for debugging and monitoring purposes."""
+        with open('fallback_log.txt', 'a') as log_file:
+            log_file.write(f'Error: {str(error)}\n')
+
+    def get_current_mode(self):
+        """Return the current navigation mode."""
+        return self.navigation_mode
+
+# Example usage
+if __name__ == "__main__":
+    fallback_system = FallbackSystem()
+    test_rssi_values = [-90, -70, None, -85, "bad input"]  # Simulated RSSI values
+
+    for value in test_rssi_values:
+        fallback_system.check_rssi(value)
+        print(f'Signal: {value}, Mode: {fallback_system.get_current_mode()}')
