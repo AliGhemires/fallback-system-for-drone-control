@@ -1,47 +1,74 @@
-import numpy as np
+class Navigation:
+    """
+    Handles navigation for the drone, including fallback to inertial navigation
+    in the absence of RSSI signals.
+    """
 
-class InertialNavigation:
-    def __init__(self, initial_position=(0.0, 0.0), initial_velocity=(0.0, 0.0), initial_orientation=0.0):
-        self.position = np.array(initial_position, dtype=float)  # x, y
-        self.velocity = np.array(initial_velocity, dtype=float)  # vx, vy
-        self.orientation = initial_orientation  # angle in radians
-        self.time_step = 0.1  # time step for updates in seconds
-        self.acceleration = np.array([0.0, 0.0], dtype=float)  # ax, ay
+    def __init__(self):
+        self.current_mode = 'normal'  # Modes: normal, fallback
+        self.position = (0, 0)  # Drone's current position
+        self.velocity = (0, 0)  # Drone's current velocity
 
-    def update_orientation(self, angular_velocity):
-        """Update the orientation based on angular velocity and ensure it stays within 0 to 2*pi range."""
-        self.orientation += angular_velocity * self.time_step
-        self.orientation %= (2 * np.pi)  # Wrap the orientation to remain within [0, 2*pi]
+    def update_position(self, delta_time):
+        """
+        Updates the drone's position based on current mode and velocity.
+        :param delta_time: Time since last update in seconds.
+        """
+        if delta_time <= 0:
+            raise ValueError("delta_time must be a positive number.")
 
-    def update_acceleration(self, acc_x, acc_y):
-        """Set the current acceleration values with safety checks."""
-        if not isinstance(acc_x, (int, float)) or not isinstance(acc_y, (int, float)):
-            raise ValueError("Acceleration must be numeric.")
-        self.acceleration = np.array([acc_x, acc_y], dtype=float)
+        if self.current_mode == 'normal':
+            # Normal navigation mode: Update position based on velocity
+            self.position = (
+                self.position[0] + self.velocity[0] * delta_time,
+                self.position[1] + self.velocity[1] * delta_time
+            )
+        elif self.current_mode == 'fallback':
+            # Inertial navigation: Implement fallback position update logic
+            self.position = self.fallback_position_update(delta_time)
 
-    def update_navigation(self):
-        """Update the position and velocity based on current acceleration and time step."""
-        self.velocity += self.acceleration * self.time_step
-        self.position += self.velocity * self.time_step
+    def fallback_position_update(self, delta_time):
+        """
+        Calculates the new position based on inertial measurement
+        during fallback navigation.
+        :param delta_time: Time since last update in seconds.
+        """
+        if delta_time <= 0:
+            raise ValueError("delta_time must be a positive number.")
 
-    def get_position(self):
-        """Get the current position of the drone as a list."""
-        return self.position.tolist()
+        # Placeholder for actual inertial navigation algorithm
+        # For now, we'll simulate some movement
+        fallback_velocity = self.get_fallback_velocity()
+        return (
+            self.position[0] + fallback_velocity[0] * delta_time,
+            self.position[1] + fallback_velocity[1] * delta_time
+        )
 
-    def get_velocity(self):
-        """Get the current velocity of the drone as a list."""
-        return self.velocity.tolist()
+    def get_fallback_velocity(self):
+        """
+        Provide logic for calculating fallback velocity. Can be replaced
+        with more sophisticated algorithms in the future.
+        """
+        return (1, 1)  # Simulated constant fallback velocity
 
-    def get_orientation(self):
-        """Get the current orientation of the drone in radians."""
-        return self.orientation
+    def switch_to_fallback(self):
+        """
+        Switches the mode to fallback navigation.
+        """
+        self.current_mode = 'fallback'
 
-# Example usage (commented)
-# if __name__ == '__main__':
-#     nav = InertialNavigation()
-#     nav.update_acceleration(0.1, 0.2)  # Simulate some acceleration
-#     for _ in range(10):
-#         nav.update_navigation()
-#         print('Position:', nav.get_position())
-#         print('Velocity:', nav.get_velocity())
-#         print('Orientation:', nav.get_orientation())
+    def switch_to_normal(self):
+        """
+        Switches the mode back to normal navigation.
+        """
+        self.current_mode = 'normal'
+
+    def set_velocity(self, new_velocity):
+        """
+        Updates the drone's velocity.
+        :param new_velocity: Tuple indicating new velocity (vx, vy).
+        """
+        if not isinstance(new_velocity, tuple) or len(new_velocity) != 2:
+            raise ValueError("new_velocity must be a tuple with two elements.")
+
+        self.velocity = new_velocity
